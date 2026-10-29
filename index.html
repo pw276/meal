@@ -153,7 +153,30 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .modal .btns{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
 .modal button{padding:8px 18px;border-radius:var(--radius-pill);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:13px}
 .modal button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+
+/* ==== 菜品视觉卡（分类配色） ==== */
+.c-hun{background:linear-gradient(140deg,#ffe4d3,#ffc9a8)}
+.c-su{background:linear-gradient(140deg,#e8f7e0,#c9e9bd)}
+.c-tang{background:linear-gradient(140deg,#fdf2d8,#f9dfae)}
+.c-zhu{background:linear-gradient(140deg,#f4efe2,#e6dac4)}
+.c-qita{background:linear-gradient(140deg,#f0eaf9,#dbd0ef)}
+.dish-click{display:flex;align-items:center;gap:14px;flex:1;min-width:0;cursor:pointer}
+/* ==== 菜品详情 ==== */
+.d-top{display:flex;align-items:center;justify-content:space-between;margin:0 16px 12px}
+.back{background:none;border:none;font-size:14px;color:var(--muted);padding:0;cursor:pointer}
+.d-hero{height:180px;margin:0 16px 16px;border-radius:var(--radius-lg);display:flex;align-items:center;justify-content:center;font-size:74px;overflow:hidden}
+.d-title{font-size:23px;font-weight:700;margin:0 16px 10px}
+.d-meta{margin:0 16px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.d-desc{margin:0 16px 14px;font-size:14px;color:var(--muted);line-height:1.7}
+.d-card{margin:0 16px 12px;background:#fff;border-radius:var(--radius-lg);padding:16px}
+.d-card h3{margin:0 0 10px;font-size:15px}
+.d-ing{display:flex;justify-content:space-between;font-size:14px;padding:7px 0;border-bottom:1px dashed var(--border)}
+.d-ing:last-child{border-bottom:none}
+.d-step{display:flex;gap:10px;font-size:14px;line-height:1.65;margin-bottom:10px}
+.d-step i{flex-shrink:0;width:19px;height:19px;border-radius:50%;background:#fdeee6;color:var(--brand);font-style:normal;font-size:12px;display:flex;align-items:center;justify-content:center}
+.add-big{width:100%;padding:13px;border-radius:var(--radius-pill);background:var(--brand);color:#fff;border:none;font-size:15px;font-weight:600}
 </style>
+<script src="dishes-data.js"></script>
 </head>
 <body>
 <div id="app">
@@ -309,6 +332,8 @@ function dateText(s){
   return `${m}月${d}日 周${week[new Date(y,m-1,d).getDay()]}`
 }
 function dishInitial(name){ return (name||'?').trim().slice(0,1) }
+function emojiOf(name){ const m = (window.DISH_META||{})[name]; return (m && m.emoji) || dishInitial(name) }
+function catClass(c){ return { '荤菜':'c-hun', '素菜':'c-su', '汤':'c-tang', '主食':'c-zhu', '其他':'c-qita' }[c] || 'c-qita' }
 function cartQty(){ return State.cart.reduce((s,i)=>s+i.qty, 0) }
 function inCart(dishId){ return State.cart.find(i=>i.dishId===dishId) }
 
@@ -446,6 +471,9 @@ function render(){
   } else if (hp.startsWith('/dish-edit')){
     const id = location.hash.split('?id=')[1]
     v.innerHTML = renderDishEdit(id)
+  } else if (hp.startsWith('/dish?')){
+    const id = new URLSearchParams(location.hash.split('?')[1]||'').get('id') || ''
+    v.innerHTML = renderDish(id)
   }
 
   bind()
@@ -467,7 +495,8 @@ function renderMenu(){
   </div>
   ${list.map(d=>`
     <div class="dish">
-      <div class="dish-img">${d.image?`<img src="${d.image}" loading="lazy" alt=""/>`:dishInitial(d.name)}</div>
+      <div class="dish-click" onclick="App.go('/dish?id=${d.id}')">
+        <div class="dish-img ${catClass(d.category)}">${d.image?`<img src="${d.image}" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" alt=""/>`:emojiOf(d.name)}</div>
       <div class="dish-main">
         <div class="dish-name">${d.name}</div>
         <div class="dish-meta">
@@ -475,11 +504,41 @@ function renderMenu(){
           <span class="dish-time">${d.cook_minutes||20} 分钟</span>
         </div>
       </div>
+      </div>
       <div class="stepper">
         ${inCart(d.id)?`<button class="step-btn" data-dec="${d.id}">−</button><span class="step-num">${inCart(d.id).qty}</span>`:''}
         <button class="step-btn add" data-add="${d.id}">+</button>
       </div>
     </div>`).join('') || `<div class="empty">这一类还没有菜</div>`}
+  `
+}
+
+// ---- 菜品详情 ----
+function renderDish(id){
+  const d = State.dishes.find(x=>x.id===id)
+  if (!d) return `<div class="hero"><h1>菜品详情</h1></div><div class="empty">菜品不存在或已被删除</div>`
+  const m = (window.DISH_META||{})[d.name] || {}
+  const ing = Array.isArray(d.ingredients) ? d.ingredients : []
+  const cur = inCart(d.id)
+  return `
+  <div class="d-top">
+    <button class="back" onclick="App.go('/menu')">‹ 菜单</button>
+    <button class="back" onclick="App.go('/dish-edit?id=${d.id}')">编辑</button>
+  </div>
+  <div class="d-hero ${catClass(d.category)}">${d.image?`<img src="${d.image}" referrerpolicy="no-referrer" onerror="this.remove()" style="width:100%;height:100%;object-fit:cover" alt=""/>`:emojiOf(d.name)}</div>
+  <div class="d-title">${d.name}</div>
+  <div class="d-meta">
+    <span class="tag">${d.category}</span>
+    ${(d.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}
+    <span class="dish-time">${d.cook_minutes||20} 分钟</span>
+  </div>
+  ${m.desc?`<div class="d-desc">${m.desc}</div>`:''}
+  ${ing.length?`<div class="d-card"><h3>用料</h3>${ing.map(i=>`<div class="d-ing"><span>${i.name}</span><span class="muted">${i.amount||''}${i.unit||''}</span></div>`).join('')}</div>`:''}
+  ${(m.steps&&m.steps.length)?`<div class="d-card"><h3>做法</h3>${m.steps.map((s,i)=>`<div class="d-step"><i>${i+1}</i><span>${s}</span></div>`).join('')}</div>`:''}
+  <div style="height:80px"></div>
+  <div style="margin:0 16px 24px">
+    <button class="add-big" data-add="${d.id}">${cur?`再加一份（已选 ${cur.qty}）`:'加入点餐'}</button>
+  </div>
   `
 }
 
