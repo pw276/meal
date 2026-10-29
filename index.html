@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#FF6A3D" />
+<title>今天吃什么</title>
+<style>
+:root{
+  --brand:#FF6A3D; --brand-deep:#E8562B; --brand-soft:#FFF1EC;
+  --text:#1D1D1F; --muted:#8A8A8F; --bg:#F5F5F7; --card:#FFFFFF; --border:#ECECEF;
+  --ok:#12B76A; --warn:#F79009;
+  --radius:12px; --radius-lg:18px; --radius-pill:999px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue",system-ui,sans-serif;font-size:14px;line-height:1.55}
+#app{max-width:480px;margin:0 auto;background:var(--bg);min-height:100vh;position:relative;padding-bottom:150px}
+.hidden{display:none!important}
+
+/* ==== 顶栏 ==== */
+.hero{padding:18px 18px 8px}
+.hero h1{font-size:28px;font-weight:700;margin:0}
+.hero .sub{color:var(--muted);font-size:13px;margin-top:4px}
+
+/* ==== 分类横滑 ==== */
+.cats{display:flex;gap:10px;overflow-x:auto;padding:12px 18px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{padding:7px 16px;border-radius:var(--radius-pill);background:#fff;color:var(--text);font-size:13px;white-space:nowrap;border:1px solid transparent}
+.cat.on{background:var(--brand-soft);color:var(--brand-deep);font-weight:600;border-color:var(--brand)}
+
+/* ==== 卡片 ==== */
+.card{background:#fff;border-radius:var(--radius-lg);padding:16px;margin:0 16px 14px}
+.card h3{margin:0 0 10px;font-size:15px;font-weight:600}
+.row{display:flex;align-items:center;gap:10px}
+.row.between{justify-content:space-between}
+.muted{color:var(--muted);font-size:12px}
+.empty{text-align:center;color:var(--muted);padding:60px 20px}
+
+/* ==== 菜品列表 ==== */
+.dish{display:flex;align-items:center;background:#fff;border-radius:var(--radius-lg);padding:14px;margin:0 16px 12px;gap:14px}
+.dish-img{width:72px;height:72px;border-radius:12px;background:#f2f2f4;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--brand);font-size:28px;font-weight:600;overflow:hidden}
+.dish-img img{width:100%;height:100%;object-fit:cover}
+.dish-main{flex:1;min-width:0}
+.dish-name{font-size:15px;font-weight:600}
+.dish-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.tag{font-size:11px;color:var(--brand-deep);background:var(--brand-soft);border-radius:6px;padding:1px 8px}
+.dish-time{font-size:11px;color:var(--muted)}
+
+/* ==== Stepper ==== */
+.stepper{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.step-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:16px;background:#fff;color:var(--text);cursor:pointer;transition:.12s}
+.step-btn:active{transform:scale(.92)}
+.step-btn.add{background:var(--brand);border-color:var(--brand);color:#fff;font-weight:700}
+.step-num{min-width:28px;text-align:center;font-size:14px;font-weight:700}
+
+/* ==== 底部栏 ==== */
+.cart-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(74px + env(safe-area-inset-bottom));width:calc(100% - 36px);max-width:444px;background:#1d1d1f;border-radius:var(--radius-pill);padding:10px 10px 10px 18px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 24px rgba(0,0,0,.18);z-index:20}
+.cart-left{color:#fff;display:flex;align-items:baseline;gap:6px}
+.cart-num{font-size:22px;font-weight:700;color:var(--brand)}
+.cart-txt{font-size:12px;color:rgba(255,255,255,.7)}
+.cart-btn{background:var(--brand);color:#fff;border:none;border-radius:var(--radius-pill);padding:10px 22px;font-size:13px;font-weight:600;cursor:pointer}
+
+/* ==== TabBar ==== */
+.tabbar{position:fixed;left:0;right:0;bottom:0;height:62px;background:#fff;border-top:1px solid var(--border);display:flex;max-width:480px;margin:0 auto;z-index:15}
+.tabbar button{flex:1;background:none;border:none;color:var(--muted);font-size:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;padding-bottom:env(safe-area-inset-bottom)}
+.tabbar button.on{color:var(--brand);font-weight:600}
+.tabbar .ico{font-size:20px}
+
+/* ==== 点餐车 ==== */
+.ci{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.ci:last-child{border-bottom:none}
+.ci-img{width:56px;height:56px;border-radius:10px;background:#f2f2f4;display:flex;align-items:center;justify-content:center;color:var(--brand);font-size:22px;font-weight:600;flex-shrink:0;overflow:hidden}
+.ci-img img{width:100%;height:100%;object-fit:cover}
+.ci-main{flex:1;min-width:0}
+.ci-name{font-weight:600;font-size:14px}
+.ci-note{border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;color:var(--text);width:100%;margin-top:6px}
+.seg{display:flex;background:var(--bg);border-radius:var(--radius-pill);padding:3px}
+.seg button{flex:1;border:none;background:none;padding:6px 14px;border-radius:var(--radius-pill);font-size:13px;color:var(--muted);cursor:pointer}
+.seg button.on{background:#fff;color:var(--text);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.date-picker{border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:14px;background:#fff}
+.btn-pri{background:var(--brand);color:#fff;border:none;border-radius:var(--radius-pill);padding:14px;font-size:15px;font-weight:600;cursor:pointer;width:100%}
+.btn-pri:disabled{background:#ffc9b6}
+.textarea{width:100%;min-height:72px;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px;resize:none;font-family:inherit}
+
+/* ==== 订单 ==== */
+.order{background:#fff;border-radius:var(--radius-lg);padding:16px;margin:0 16px 12px}
+.o-head{display:flex;justify-content:space-between;align-items:center}
+.o-date{font-size:15px;font-weight:600}
+.o-meal{font-size:11px;color:var(--brand-deep);background:var(--brand-soft);border-radius:6px;padding:1px 8px;margin-left:8px}
+.o-status{font-size:11px;padding:2px 10px;border-radius:var(--radius-pill);background:#f2f2f4;color:var(--muted)}
+.st-pending{background:#fff6e6;color:#b25f00}
+.st-confirmed{background:var(--brand-soft);color:var(--brand-deep)}
+.st-done{background:#eafaf1;color:#0f8b4d}
+.st-cancelled{background:#f2f2f4;color:#a1a1aa}
+.o-items{margin-top:12px;font-size:14px}
+.o-note{margin-top:8px;font-size:12px;color:var(--muted)}
+.o-foot{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+.o-act{font-size:13px;color:var(--brand);font-weight:600;padding:4px 14px;border:1px solid var(--brand);border-radius:var(--radius-pill);background:none;cursor:pointer}
+.o-act:active{background:var(--brand-soft)}
+
+/* ==== 汇总 ==== */
+.s-row{display:flex;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:14px}
+.s-row:last-child{border-bottom:none}
+.s-name{flex:1;min-width:0}
+.s-qty{color:var(--brand-deep);font-weight:600;font-size:14px}
+.s-ing .chk{width:18px;height:18px;border:1px solid #d6d6db;border-radius:50%;margin-right:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.s-ing .chk.on{background:var(--ok);border-color:var(--ok)}
+.s-done .s-name{color:#b0b0b6;text-decoration:line-through}
+.s-done .s-qty{color:#b0b0b6}
+
+/* ==== 我的 ==== */
+.me-card{display:flex;align-items:center;gap:14px}
+.avatar{width:56px;height:56px;border-radius:50%;background:var(--brand-soft);color:var(--brand-deep);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;flex-shrink:0}
+.me-input{font-size:18px;font-weight:600;border:none;border-bottom:1px solid var(--border);padding:4px 0;background:transparent;width:200px;outline:none}
+.link-row{display:flex;align-items:center;gap:14px;padding:12px 0;border-bottom:1px solid var(--border);cursor:pointer}
+.link-row:last-child{border-bottom:none}
+.link-row:active{background:#fafafa}
+.link-ico{width:40px;height:40px;border-radius:10px;background:var(--brand-soft);color:var(--brand-deep);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:600;flex-shrink:0}
+.link-main{flex:1;min-width:0}
+.link-arrow{color:#c7c7cc;font-size:18px}
+.ini{width:40px;height:40px;border-radius:10px;background:#f2f2f4;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0}
+.add-btn{margin-top:12px;height:42px;line-height:42px;text-align:center;border-radius:var(--radius-pill);border:1px dashed var(--brand);color:var(--brand-deep);font-size:13px;font-weight:600;background:var(--brand-soft);cursor:pointer}
+
+/* ==== 菜品编辑 ==== */
+.f-row{display:flex;align-items:center;min-height:44px;border-bottom:1px solid var(--border);padding:6px 0}
+.f-row:last-child{border-bottom:none}
+.f-label{width:70px;flex-shrink:0;font-size:13px}
+.f-input{flex:1;font-size:14px;border:none;background:transparent;outline:none;padding:4px 0}
+.f-picker{background:#f2f2f4;border-radius:8px;padding:6px 12px;font-size:14px;cursor:pointer}
+.ing{display:flex;align-items:center;gap:8px;padding:8px 0}
+.ing-name,.ing-amt{flex:1;background:var(--bg);border-radius:8px;padding:8px 10px;border:none;font-size:13px;outline:none}
+.ing-amt{flex:0 0 80px}
+.ing-unit{background:var(--bg);border-radius:8px;padding:8px 10px;font-size:13px;border:none}
+.ing-del{color:var(--muted);font-size:12px;cursor:pointer}
+.img-pick{width:80px;height:80px;border-radius:10px;background:var(--bg);border:1px dashed #d6d6db;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer}
+.img-pick img{width:100%;height:100%;object-fit:cover}
+
+/* ==== 空态 ==== */
+.go-menu-btn{display:block;margin:16px auto;width:180px;padding:12px 0;background:var(--brand);color:#fff;border:none;border-radius:var(--radius-pill);font-size:14px;font-weight:600;cursor:pointer}
+
+/* ==== 通知条 ==== */
+.toast{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;z-index:100;pointer-events:none;animation:fadein .2s}
+@keyframes fadein{from{opacity:0;transform:translate(-50%,-55%)}to{opacity:1;transform:translate(-50%,-50%)}}
+
+/* ==== 配置弹窗 ==== */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal-box{background:#fff;border-radius:16px;padding:20px;max-width:400px;width:100%;max-height:80vh;overflow-y:auto}
+.modal h3{margin:0 0 10px}
+.modal p{font-size:13px;color:var(--muted);margin:0 0 14px}
+.modal input,.modal textarea{width:100%;border:1px solid var(--border);border-radius:8px;padding:10px;font-size:13px;margin-bottom:10px;box-sizing:border-box;font-family:inherit}
+.modal .btns{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+.modal button{padding:8px 18px;border-radius:var(--radius-pill);border:1px solid var(--border);background:#fff;cursor:pointer;font-size:13px}
+.modal button.primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="view"></div>
+
+  <!-- 底部点餐车条 -->
+  <div id="cartBar" class="cart-bar hidden" onclick="App.go('/cart')">
+    <div class="cart-left"><span class="cart-num" id="cartNum">0</span><span class="cart-txt">份已选</span></div>
+    <button class="cart-btn">去下单 ›</button>
+  </div>
+
+  <!-- TabBar -->
+  <nav class="tabbar">
+    <button data-tab="menu" onclick="App.go('/menu')"><span class="ico">🍽️</span>菜单</button>
+    <button data-tab="orders" onclick="App.go('/orders')"><span class="ico">📋</span>订单</button>
+    <button data-tab="profile" onclick="App.go('/profile')"><span class="ico">👤</span>我的</button>
+  </nav>
+
+  <!-- 配置弹窗（首次打开要求填 Supabase key） -->
+  <div id="configModal" class="modal hidden">
+    <div class="modal-box">
+      <h3>首次使用：填一下 Supabase</h3>
+      <p>注册完 Supabase 后，把这两个值填进来就能用了。以后想换直接点「我的」→「重配」。</p>
+      <input id="sbUrl" placeholder="Project URL，形如 https://xxxxx.supabase.co" />
+      <input id="sbKey" placeholder="anon public key（以 eyJ 开头）" style="font-family:monospace;font-size:11px" />
+      <div class="btns">
+        <button onclick="Modal.close('configModal')">取消</button>
+        <button class="primary" onclick="Modal.saveConfig()">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============= 全局状态 =============
+const LS = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)||'null') } catch(e){ return null } },
+  set(k,v){ localStorage.setItem(k, JSON.stringify(v)) },
+  del(k){ localStorage.removeItem(k) }
+}
+
+const State = {
+  sbUrl: localStorage.getItem('sb_url') || 'https://lxpshnwbhhhbruittfpq.supabase.co',
+  sbKey: localStorage.getItem('sb_key') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx4cHNobndiaGhoYnJ1aXR0ZnBxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyNzU0NDcsImV4cCI6MjEwODg1MTQ0N30.FvgZpAah83idBlDm2-P9rQ02sYH6SucMCF3RBIYx2YE',
+  nick: localStorage.getItem('nick') || '',
+  cart: LS.get('cart') || [],        // [{dishId, dishName, image, note, qty}]
+  userStoreKey: 'meal_cart_' + (navigator.userAgent.length % 10000), // 隔离不同设备的购物车
+  dishes: LS.get('cache_dishes') || [],
+  orders: [],
+  items: [],
+  currentDate: (()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(),
+  refreshTimer: null
+}
+
+// 为了隔离浏览器 localStorage 多标签冲突，换一下 key
+function initCart(){
+  State.cart = LS.get(State.userStoreKey) || []
+}
+function saveCart(){ LS.set(State.userStoreKey, State.cart) }
+initCart()
+
+// ============= Supabase REST 封装（零依赖，直接用 fetch） =============
+function api(path, { method='GET', body, headers={} } = {}){
+  if (!State.sbUrl || !State.sbKey) return Promise.reject(new Error('未配置 Supabase'))
+  const url = State.sbUrl.replace(/\/+$/,'') + '/rest/v1/' + path
+  const h = { apikey: State.sbKey, Authorization: 'Bearer ' + State.sbKey }
+  Object.keys(headers).forEach(k => { h[k] = headers[k] })
+  if (body !== undefined) h['Content-Type'] = 'application/json'
+  return fetch(url, { method, headers: h, body: body === undefined ? undefined : JSON.stringify(body) })
+    .then(async r => {
+      const text = await r.text()
+      if (!r.ok) throw new Error('[' + r.status + '] ' + text.slice(0, 200))
+      return text ? JSON.parse(text) : null
+    })
+}
+
+async function loadAll(){
+  if (!State.sbUrl || !State.sbKey) return
+  try{
+    const [dishes, orders] = await Promise.all([
+      api('dishes?select=*&order=created_at.asc'),
+      api('orders?select=*,order_items(*)&order=created_at.desc&limit=50')
+    ])
+    State.dishes = dishes || []
+    const rows = (orders || []).map(o => {
+      const its = o.order_items || []
+      delete o.order_items
+      return { ...o, _items: its }
+    })
+    State.orders = rows
+    State.items = rows.flatMap(o => o._items)
+    LS.set('cache_dishes', State.dishes)
+    render()
+  }catch(e){
+    console.warn('[loadAll]', e)
+  }
+}
+
+// ============= 路由 =============
+// location.hash 带 # 前缀，统一剥掉
+function hashPath(){ return (location.hash || '').replace(/^#/, '') || '/menu' }
+
+const App = {
+  tab: '',
+  go(path){ location.hash = path; onHash(); window.scrollTo(0,0) },
+  startRefresh(){
+    if (State.refreshTimer) return
+    // 只在页面可见时轮询，省电省流量
+    State.refreshTimer = setInterval(()=>{
+      if (document.visibilityState === 'visible') loadAll()
+    }, 12000)
+  },
+  stopRefresh(){ if (State.refreshTimer){ clearInterval(State.refreshTimer); State.refreshTimer=null } }
+}
+
+function onHash(){
+  const h = hashPath()
+  App.tab = h.startsWith('/menu') ? 'menu' : h.startsWith('/cart') ? 'cart' : h.startsWith('/orders') ? 'orders' : 'profile'
+  document.querySelectorAll('.tabbar button').forEach(b=>{
+    b.classList.toggle('on', b.dataset.tab === App.tab)
+  })
+  render()
+}
+window.addEventListener('hashchange', onHash)
+
+// ============= Toast / Modal =============
+function toast(msg){
+  const t = document.createElement('div'); t.className='toast'; t.textContent=msg
+  document.body.appendChild(t); setTimeout(()=>t.remove(), 1600)
+}
+const Modal = {
+  close(id){ document.getElementById(id).classList.add('hidden') },
+  open(id){ document.getElementById(id).classList.remove('hidden') },
+  saveConfig(){
+    State.sbUrl = document.getElementById('sbUrl').value.trim()
+    State.sbKey = document.getElementById('sbKey').value.trim()
+    if (!State.sbUrl || !State.sbKey){ toast('两个都要填'); return }
+    localStorage.setItem('sb_url', State.sbUrl)
+    localStorage.setItem('sb_key', State.sbKey)
+    Modal.close('configModal')
+    toast('保存成功')
+    loadAll()
+  }
+}
+
+// ============= 工具函数 =============
+function mealLabel(t){ return t==='lunch'?'午饭':'晚饭' }
+function statusLabel(s){ return {pending:'待确认',confirmed:'已确认',done:'已完成',cancelled:'已取消'}[s] || s }
+function dateText(s){
+  if (!s) return ''
+  const [y,m,d]=s.split('-').map(Number)
+  const week=['日','一','二','三','四','五','六']
+  return `${m}月${d}日 周${week[new Date(y,m-1,d).getDay()]}`
+}
+function dishInitial(name){ return (name||'?').trim().slice(0,1) }
+function cartQty(){ return State.cart.reduce((s,i)=>s+i.qty, 0) }
+function inCart(dishId){ return State.cart.find(i=>i.dishId===dishId) }
+
+// ============= 购物车操作 =============
+function cartAdd(d){
+  const it = State.cart.find(i=>i.dishId===d.id)
+  if (it) it.qty += 1
+  else State.cart.push({ dishId:d.id, dishName:d.name, image:d.image||'', note:'', qty:1 })
+  saveCart(); render()
+}
+function cartDec(dishId){
+  const idx = State.cart.findIndex(i=>i.dishId===dishId)
+  if (idx===-1) return
+  State.cart[idx].qty -= 1
+  if (State.cart[idx].qty <= 0) State.cart.splice(idx,1)
+  saveCart(); render()
+}
+function cartClear(){ State.cart = []; saveCart(); render() }
+
+// ============= 订单操作 =============
+async function submitOrder({mealDate,mealType,note='',items}){
+  const dict = {}; State.dishes.forEach(d=>dict[d.id]=d)
+  const normalized = items.map(i=>{
+    const d = dict[i.dishId]; if (!d) throw new Error('有菜品已被删除')
+    return { dish_id:i.dishId, dish_name:d.name, qty:Math.min(Math.max(i.qty,1),20), note:(i.note||'').toString().slice(0,40) }
+  })
+  const itemCount = normalized.reduce((s,i)=>s+i.qty,0)
+
+  // 查是否已有同人同日同餐次的单（用昵称当 owner）
+  const exist = await api(`orders?select=id&owner_nick=eq.${encodeURIComponent(State.nick)}&meal_date=eq.${mealDate}&meal_type=eq.${mealType}&limit=1`)
+
+  let orderId
+  if (exist && exist.length){
+    orderId = exist[0].id
+    await api(`orders?id=eq.${orderId}`, {
+      method:'PATCH',
+      body:{ note, item_count:itemCount, status:'pending', updated_at:new Date().toISOString() },
+      headers:{ Prefer:'return=minimal' }
+    })
+    await api(`order_items?order_id=eq.${orderId}`, { method:'DELETE' })
+  } else {
+    const ins = await api('orders', {
+      method:'POST',
+      body:{ owner_nick:State.nick, meal_date:mealDate, meal_type:mealType, note, item_count:itemCount, status:'pending' },
+      headers:{ Prefer:'return=representation' }
+    })
+    orderId = ins[0].id
+  }
+  await api('order_items', {
+    method:'POST',
+    body: normalized.map(i=>({ order_id:orderId, dish_id:i.dish_id, dish_name:i.dish_name, qty:i.qty, note:i.note })),
+    headers:{ Prefer:'return=minimal' }
+  })
+  return { orderId, itemCount }
+}
+
+async function setOrderStatus(id, status){
+  await api(`orders?id=eq.${id}`, {
+    method:'PATCH',
+    body:{ status, updated_at:new Date().toISOString() },
+    headers:{ Prefer:'return=minimal' }
+  })
+  await loadAll()
+}
+
+// ============= 汇总逻辑 =============
+function dailySummary(date){
+  const orders = State.orders.filter(o=>o.meal_date===date && o.status!=='cancelled')
+  const items = State.items.filter(i=>orders.find(o=>o.id===i.order_id))
+
+  const dishMap = {}
+  items.forEach(i=>{ dishMap[i.dish_name] = (dishMap[i.dish_name]||0) + i.qty })
+  const dishes = Object.keys(dishMap).map(n=>({name:n,qty:dishMap[n]})).sort((a,b)=>b.qty-a.qty)
+
+  const dishesById = {}; State.dishes.forEach(d=>dishesById[d.id]=d)
+  const ingMap = {}
+  items.forEach(it=>{
+    const d = dishesById[it.dish_id]
+    if (!d || !Array.isArray(d.ingredients)) return
+    d.ingredients.forEach(ig=>{
+      const name = (ig.name||'').trim(); if (!name) return
+      const unit = ig.unit||''
+      const key = name + '|' + unit
+      if (!ingMap[key]) ingMap[key] = { key, name, unit, amount:0 }
+      const n = parseFloat(ig.amount); if (!Number.isNaN(n)) ingMap[key].amount += n*it.qty
+    })
+  })
+  const ingredients = Object.keys(ingMap).map(k=>{
+    const v = ingMap[k]
+    return { key:v.key, name:v.name, unit:v.unit, amount: Math.round(v.amount*100)/100, checked:false }
+  }).sort((a,b)=>a.name.localeCompare(b.name,'zh'))
+
+  return { date, orderCount:orders.length, dishes, ingredients }
+}
+
+// ============= 菜品 CRUD =============
+async function saveDish(payload, id){
+  if (id) await api(`dishes?id=eq.${id}`, { method:'PATCH', body:payload, headers:{ Prefer:'return=minimal' } })
+  else await api('dishes', { method:'POST', body:payload, headers:{ Prefer:'return=minimal' } })
+  await loadAll()
+}
+async function deleteDish(id){
+  await api(`dishes?id=eq.${id}`, { method:'DELETE' })
+  await loadAll()
+}
+
+// ============= 渲染 =============
+function render(){
+  const v = document.getElementById('view')
+  const cartBar = document.getElementById('cartBar')
+  const q = cartQty()
+  cartBar.classList.toggle('hidden', q === 0 || App.tab === 'cart')
+  document.getElementById('cartNum').textContent = q
+
+  if (!State.sbUrl || !State.sbKey){
+    Modal.open('configModal')
+    v.innerHTML = '<div class="empty">还没填 Supabase 配置。点右下角我的 → 重配。</div>'
+    return
+  }
+
+  switch(App.tab){
+    case 'menu': v.innerHTML = renderMenu(); break
+    case 'cart': v.innerHTML = renderCart(); break
+    case 'orders': v.innerHTML = renderOrders(); break
+    case 'profile': v.innerHTML = renderProfile(); break
+  }
+  const hp = hashPath()
+  if (hp.startsWith('/summary')){
+    v.innerHTML = renderSummary()
+  } else if (hp.startsWith('/dish-edit')){
+    const id = location.hash.split('?id=')[1]
+    v.innerHTML = renderDishEdit(id)
+  }
+
+  bind()
+}
+
+// ---- 菜单 ----
+function renderMenu(){
+  const cats = [
+    {k:'all',l:'全部'},{k:'荤菜',l:'荤菜'},{k:'素菜',l:'素菜'},
+    {k:'汤',l:'汤'},{k:'主食',l:'主食'},{k:'其他',l:'其他'}
+  ]
+  const cat = new URLSearchParams(location.hash.split('?')[1]||'').get('cat') || 'all'
+  const list = State.dishes.filter(d=>d.on_sale!==false && (cat==='all'||d.category===cat))
+
+  return `
+  <div class="hero"><h1>今天吃什么</h1><div class="sub">${dateText(State.currentDate)} · ${State.dishes.filter(d=>d.on_sale!==false).length} 道可选</div></div>
+  <div class="cats">
+    ${cats.map(c=>`<button class="cat ${cat===c.k?'on':''}" onclick="App.go('/menu?cat=${c.k}')">${c.l}</button>`).join('')}
+  </div>
+  ${list.map(d=>`
+    <div class="dish">
+      <div class="dish-img">${d.image?`<img src="${d.image}" loading="lazy" alt=""/>`:dishInitial(d.name)}</div>
+      <div class="dish-main">
+        <div class="dish-name">${d.name}</div>
+        <div class="dish-meta">
+          ${(d.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}
+          <span class="dish-time">${d.cook_minutes||20} 分钟</span>
+        </div>
+      </div>
+      <div class="stepper">
+        ${inCart(d.id)?`<button class="step-btn" data-dec="${d.id}">−</button><span class="step-num">${inCart(d.id).qty}</span>`:''}
+        <button class="step-btn add" data-add="${d.id}">+</button>
+      </div>
+    </div>`).join('') || `<div class="empty">这一类还没有菜</div>`}
+  `
+}
+
+// ---- 点餐车 ----
+function renderCart(){
+  const items = State.cart
+  const total = cartQty()
+  const params = new URLSearchParams(location.hash.split('?')[1]||'')
+  const mealDate = params.get('date') || State.currentDate
+  const mealType = params.get('type') || 'dinner'
+  return `
+  <div class="hero"><h1 style="margin-bottom:12px">点餐车</h1></div>
+  ${items.length ? `
+  <div class="card">
+    <h3>用餐时间</h3>
+    <div class="row between" style="margin-bottom:12px">
+      <input type="date" class="date-picker" id="dmealDate" value="${mealDate}"/>
+      <div class="seg">
+        <button id="mtLunch" class="${mealType==='lunch'?'on':''}">午饭</button>
+        <button id="mtDinner" class="${mealType==='dinner'?'on':''}">晚饭</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>已选 ${items.length} 道 · ${total} 份</h3>
+    ${items.map(i=>`
+      <div class="ci">
+        <div class="ci-img">${i.image?`<img src="${i.image}" alt=""/>`:dishInitial(i.dishName)}</div>
+        <div class="ci-main">
+          <div class="ci-name">${i.dishName}</div>
+          <input class="ci-note" data-note="${i.dishId}" placeholder="备注：少辣" value="${i.note}"/>
+        </div>
+        <div class="stepper">
+          <button class="step-btn" data-dec="${i.dishId}">−</button>
+          <span class="step-num">${i.qty}</span>
+          <button class="step-btn add" data-add="${i.dishId}">+</button>
+        </div>
+      </div>`).join('')}
+  </div>
+
+  <div class="card">
+    <h3>整单备注</h3>
+    <textarea id="noteAll" class="textarea" placeholder="比如：今晚有客人">${params.get('note')||''}</textarea>
+  </div>
+
+  <div class="card">
+    <button class="btn-pri" id="btnSubmit">提交点单（${State.nick || '我'}）</button>
+  </div>
+  ` : `<div class="empty">点餐车是空的。<button class="go-menu-btn" onclick="App.go('/menu')">去点菜</button></div>`}
+  `
+}
+
+// ---- 订单 ----
+function renderOrders(){
+  const scope = new URLSearchParams(location.hash.split('?')[1]||'').get('scope') || 'mine'
+  const list = scope==='mine'
+    ? State.orders.filter(o=>o.owner_nick===State.nick)
+    : State.orders
+  const itemsByOrder = {}
+  State.items.forEach(i=>{ (itemsByOrder[i.order_id]=itemsByOrder[i.order_id]||[]).push(i) })
+
+  return `
+  <div class="hero"><h1>订单</h1></div>
+  <div class="cats">
+    <button class="cat ${scope==='mine'?'on':''}" onclick="App.go('/orders?scope=mine')">我点的</button>
+    <button class="cat ${scope==='all'?'on':''}" onclick="App.go('/orders?scope=all')">全家</button>
+  </div>
+  ${list.length ? list.map(o=>{
+    const its = itemsByOrder[o.id]||[]
+    const itemsText = its.map(i=>`${i.dish_name}×${i.qty}`).join('、')
+    return `
+    <div class="order">
+      <div class="o-head">
+        <div><span class="o-date">${dateText(o.meal_date)}</span><span class="o-meal">${mealLabel(o.meal_type)}</span></div>
+        <span class="o-status st-${o.status}">${statusLabel(o.status)}</span>
+      </div>
+      <div class="o-items">${itemsText || '（菜品已删除）'}</div>
+      ${o.note?`<div class="o-note">整单备注：${o.note}</div>`:''}
+      <div class="o-foot">
+        <span class="muted">${o.owner_nick||'家人'} · 共 ${o.item_count} 份</span>
+        ${o.status!=='done'?`<button class="o-act" data-finish="${o.id}">标记完成</button>`:''}
+      </div>
+    </div>`
+  }).join('') : `<div class="empty">还没有订单</div>`}
+  `
+}
+
+// ---- 我的 ----
+function renderProfile(){
+  const myDishes = State.dishes
+  return `
+  <div class="hero"><h1>我的</h1></div>
+
+  <div class="card me-card">
+    <div class="avatar">${dishInitial(State.nick||'我')}</div>
+    <div>
+      <input class="me-input" id="nickInput" placeholder="给自己起个名（比如：老妈）" value="${State.nick}"/>
+      <div class="muted" style="margin-top:4px">改完点一下空白处保存</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="link-row" onclick="App.go('/summary')">
+      <div class="link-ico">汇</div>
+      <div class="link-main"><div style="font-weight:600">今日汇总</div><div class="muted">谁点了什么 · 采购清单</div></div>
+      <div class="link-arrow">›</div>
+    </div>
+    <div class="link-row" onclick="App.go('/dish-edit')">
+      <div class="link-ico">+</div>
+      <div class="link-main"><div style="font-weight:600">新增菜品</div><div class="muted">带食材一起写</div></div>
+      <div class="link-arrow">›</div>
+    </div>
+    <div class="link-row" id="openConfig">
+      <div class="link-ico">⚙️</div>
+      <div class="link-main"><div style="font-weight:600">重配 Supabase</div><div class="muted">换数据库时改这里</div></div>
+      <div class="link-arrow">›</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <h3>菜品管理</h3>
+      <span class="muted">${myDishes.length} 道</span>
+    </div>
+    ${myDishes.length ? myDishes.map(d=>`
+      <div class="link-row" onclick="App.go('/dish-edit?id=${d.id}')">
+        <div class="ini">${dishInitial(d.name)}</div>
+        <div class="link-main">
+          <div style="font-weight:500">${d.name}${d.on_sale===false?`<span class="o-status st-cancelled" style="margin-left:8px">已下架</span>`:''}</div>
+          <div class="muted">${d.category} · ${d.cook_minutes||20} 分钟</div>
+        </div>
+        <div class="link-arrow">›</div>
+      </div>`).join('') : `<div class="empty">还没有菜品</div>`}
+  </div>
+  `
+}
+
+// ---- 汇总 ----
+function renderSummary(){
+  const s = dailySummary(State.currentDate)
+  return `
+  <div class="hero">
+    <h1 style="margin-bottom:12px">今日汇总</h1>
+    <input type="date" class="date-picker" id="sDate" value="${State.currentDate}"/>
+  </div>
+
+  <div class="card">
+    <h3>今天要做（${s.orderCount} 张订单）</h3>
+    ${s.dishes.length ? s.dishes.map(d=>`<div class="s-row"><span class="s-name">${d.name}</span><span class="s-qty">${d.qty} 份</span></div>`).join('') : `<div class="empty">这天还没有人点菜</div>`}
+  </div>
+
+  <div class="card">
+    <h3>采购清单</h3>
+    <div class="muted" style="margin-bottom:8px">点一行可以划掉</div>
+    ${s.ingredients.length ? s.ingredients.map(i=>`
+      <div class="s-row s-ing" data-toggle="${i.key}">
+        <div class="chk ${i.checked?'on':''}"></div>
+        <span class="s-name">${i.name}</span>
+        <span class="s-qty">${i.amount}${i.unit}</span>
+      </div>`).join('') : `<div class="empty">给菜品补上食材，这里会自动算出来</div>`}
+    ${s.ingredients.length ? `<button class="btn-pri" id="btnCopy" style="margin-top:12px">复制清单</button>` : ''}
+  </div>
+
+  <button class="go-menu-btn" onclick="history.back()">返回</button>
+  `
+}
+
+// ---- 菜品编辑 ----
+function renderDishEdit(id){
+  const d = id ? State.dishes.find(x=>x.id===id) : null
+  if (id && !d) return '<div class="empty">菜品不存在</div>'
+  const f = d || {
+    name:'', category:'荤菜', tags:[], cook_minutes:20, on_sale:true, image:'',
+    ingredients:[{name:'', amount:'', unit:'g'}]
+  }
+  const cats = ['荤菜','素菜','汤','主食','其他']
+  const units = ['g','ml','个','条','勺','瓣','根','把','片']
+  const catIdx = cats.indexOf(f.category) >= 0 ? cats.indexOf(f.category) : 0
+
+  return `
+  <div class="hero"><h1>${d?'编辑菜品':'新增菜品'}</h1></div>
+  <div class="card">
+    <div class="f-row"><span class="f-label">菜名</span><input class="f-input" id="fName" value="${f.name||''}" placeholder="红烧肉"/></div>
+    <div class="f-row"><span class="f-label">分类</span>
+      <select class="f-picker" id="fCat">${cats.map((c,i)=>`<option value="${c}" ${i===catIdx?'selected':''}>${c}</option>`).join('')}</select>
+    </div>
+    <div class="f-row"><span class="f-label">标签</span><input class="f-input" id="fTags" value="${(f.tags||[]).join(',')}" placeholder="下饭,微辣"/></div>
+    <div class="f-row"><span class="f-label">耗时</span><input class="f-input" id="fMin" type="number" value="${f.cook_minutes||20}" style="flex:0 0 60px"/><span class="muted">分钟</span></div>
+    <div class="f-row"><span class="f-label">上架</span><input type="checkbox" id="fOnSale" ${f.on_sale?'checked':''} style="width:20px;height:20px"/></div>
+    <div class="f-row"><span class="f-label">图片</span>
+      <label class="img-pick">
+        ${f.image?`<img src="${f.image}" alt=""/>`:''}
+        <input type="file" accept="image/*" id="fImg" style="display:none"/>
+        ${!f.image?'+':''}
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>食材</h3>
+    <div class="muted" style="margin-bottom:8px">这里的食材 × 点单份数 = 采购清单</div>
+    <div id="ingsWrap">
+      ${(f.ingredients||[]).map((ig,idx)=>`
+        <div class="ing" data-idx="${idx}">
+          <input class="ing-name" value="${ig.name||''}" placeholder="食材"/>
+          <input class="ing-amt" value="${ig.amount||''}" placeholder="用量"/>
+          <select class="ing-unit">${units.map(u=>`<option value="${u}" ${ig.unit===u?'selected':''}>${u}</option>`).join('')}</select>
+          <span class="ing-del" data-del="${idx}">删</span>
+        </div>`).join('')}
+    </div>
+    <div class="add-btn" id="addIng">+ 加一行食材</div>
+  </div>
+
+  <div class="card">
+    <button class="btn-pri" id="btnSave">保存</button>
+    ${d?`<div class="empty" id="btnDel" style="color:#c0392b;cursor:pointer;margin-top:8px">删除这道菜</div>`:''}
+  </div>
+  `
+}
+
+// ============= 事件绑定 =============
+function bind(){
+  // 菜单加减
+  document.querySelectorAll('[data-add]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.dataset.add
+      const dish = State.dishes.find(d=>d.id===id); if (!dish) return
+      cartAdd(dish)
+    }
+  })
+  document.querySelectorAll('[data-dec]').forEach(btn=>{
+    btn.onclick = ()=> cartDec(btn.dataset.dec)
+  })
+
+  // 点餐车
+  const dmealDate = document.getElementById('dmealDate')
+  if (dmealDate) dmealDate.onchange = e=>{
+    const n = new URLSearchParams(location.hash.split('?')[1]||'')
+    App.go(`/cart?date=${e.target.value}&type=${n.get('type')||'dinner'}`)
+  }
+  const mtLunch = document.getElementById('mtLunch')
+  if (mtLunch) mtLunch.onclick = ()=>{
+    const n = new URLSearchParams(location.hash.split('?')[1]||'')
+    App.go(`/cart?date=${n.get('date')||State.currentDate}&type=lunch&note=${encodeURIComponent(n.get('note')||'')}`)
+  }
+  const mtDinner = document.getElementById('mtDinner')
+  if (mtDinner) mtDinner.onclick = ()=>{
+    const n = new URLSearchParams(location.hash.split('?')[1]||'')
+    App.go(`/cart?date=${n.get('date')||State.currentDate}&type=dinner&note=${encodeURIComponent(n.get('note')||'')}`)
+  }
+  document.querySelectorAll('[data-note]').forEach(inp=>{
+    inp.oninput = e=>{
+      const id = inp.dataset.note
+      const it = State.cart.find(i=>i.dishId===id); if (it) it.note = e.target.value
+      saveCart()
+    }
+  })
+
+  const submit = document.getElementById('btnSubmit')
+  if (submit){
+    submit.onclick = async ()=>{
+      if (!State.nick){ toast('先去"我的"填一下昵称'); App.go('/profile'); return }
+      const n = new URLSearchParams(location.hash.split('?')[1]||'')
+      const date = n.get('date')||State.currentDate
+      const type = n.get('type')||'dinner'
+      const note = (document.getElementById('noteAll')?.value || '').trim()
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date)){ toast('日期不对'); return }
+      submit.disabled = true; submit.textContent = '提交中…'
+      try{
+        const r = await submitOrder({ mealDate:date, mealType:type, note, items:State.cart })
+        cartClear()
+        toast('已提交'); setTimeout(()=>App.go('/orders?scope=mine'), 600)
+      }catch(e){ toast(e.message||'提交失败') }
+      finally{ submit.disabled = false; submit.textContent = '提交点单（' + (State.nick||'我') + '）' }
+    }
+  }
+
+  // 订单完成
+  document.querySelectorAll('[data-finish]').forEach(btn=>{
+    btn.onclick = ()=>{
+      if (confirm('确认这一单已做好？')){ setOrderStatus(btn.dataset.finish, 'done'); toast('已标记') }
+    }
+  })
+
+  // 我的昵称
+  const nick = document.getElementById('nickInput')
+  if (nick){
+    nick.onchange = ()=>{
+      State.nick = nick.value.trim()
+      localStorage.setItem('nick', State.nick)
+      toast('已保存')
+    }
+  }
+  const openConfig = document.getElementById('openConfig')
+  if (openConfig) openConfig.onclick = ()=> Modal.open('configModal')
+
+  // 汇总
+  const sDate = document.getElementById('sDate')
+  if (sDate){
+    sDate.onchange = e=>{ State.currentDate = e.target.value; App.go('/summary') }
+  }
+  document.querySelectorAll('[data-toggle]').forEach(row=>{
+    row.onclick = ()=> row.classList.toggle('s-done')
+  })
+  const btnCopy = document.getElementById('btnCopy')
+  if (btnCopy){
+    btnCopy.onclick = ()=>{
+      const s = dailySummary(State.currentDate)
+      const dPart = s.dishes.map(d=>`${d.name} × ${d.qty}`).join('\n')
+      const iPart = s.ingredients.map(i=>`· ${i.name} ${i.amount}${i.unit}`).join('\n')
+      const txt = `【${dateText(State.currentDate)}】\n${dPart}\n\n采购清单\n${iPart}`
+      navigator.clipboard?.writeText(txt).then(()=>toast('已复制'))
+        .catch(()=>{ const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); toast('已复制') })
+    }
+  }
+
+  // 菜品编辑
+  const addIng = document.getElementById('addIng')
+  if (addIng) addIng.onclick = ()=>{
+    const wrap = document.getElementById('ingsWrap')
+    const units = ['g','ml','个','条','勺','瓣','根','把','片']
+    wrap.insertAdjacentHTML('beforeend', `
+      <div class="ing">
+        <input class="ing-name" placeholder="食材"/>
+        <input class="ing-amt" placeholder="用量"/>
+        <select class="ing-unit">${units.map(u=>`<option>${u}</option>`).join('')}</select>
+        <span class="ing-del" style="cursor:pointer;color:#c0392b">删</span>
+      </div>`)
+    bind() // 重新绑删除按钮
+  }
+  document.querySelectorAll('.ing-del').forEach(span=>{
+    span.onclick = ()=> span.parentElement.remove()
+  })
+  const fImg = document.getElementById('fImg')
+  if (fImg) fImg.onchange = async e=>{
+    const file = e.target.files[0]; if (!file) return
+    // 转 dataURL 存到 Supabase 公共存储，或直接存为 data URL（体积小的图可接受）
+    const reader = new FileReader()
+    reader.onload = ev=>{
+      const url = ev.target.result
+      // 替换 UI（保存时会上传或直接写 payload）
+      const label = fImg.parentElement
+      label.innerHTML = `<img src="${url}" alt=""/>`
+      // 存到 dataset
+      label.dataset.imgUrl = url
+      // 保留原 input 以便重新选择
+      const hidden = document.createElement('input')
+      hidden.type='file'; hidden.accept='image/*'; hidden.style.display='none'
+      hidden.id='fImg'; hidden.onchange = fImg.onchange
+      label.appendChild(hidden)
+    }
+    reader.readAsDataURL(file)
+  }
+  const btnSave = document.getElementById('btnSave')
+  if (btnSave){
+    btnSave.onclick = async ()=>{
+      const name = document.getElementById('fName').value.trim()
+      if (!name){ toast('菜名没填'); return }
+      const category = document.getElementById('fCat').value
+      const tags = document.getElementById('fTags').value.split(/[,，、\s]+/).map(t=>t.trim()).filter(Boolean).slice(0,5)
+      const cookMinutes = Number(document.getElementById('fMin').value)||20
+      const onSale = document.getElementById('fOnSale').checked
+      let image = ''
+      const imgLabel = document.querySelector('.img-pick')
+      if (imgLabel && imgLabel.dataset.imgUrl) image = imgLabel.dataset.imgUrl
+
+      const ings = Array.from(document.querySelectorAll('#ingsWrap .ing')).map(row=>{
+        const [nameInp, amtInp, unitSel] = row.querySelectorAll('.ing-name, .ing-amt, .ing-unit')
+        return { name:nameInp.value.trim(), amount:amtInp.value.trim(), unit:unitSel.value }
+      }).filter(i=>i.name)
+
+      // 图片超过 500KB 提示压缩
+      if (image.startsWith('data:image') && image.length > 700*1024){
+        toast('图片较大，建议换小图')
+      }
+
+      btnSave.disabled = true; btnSave.textContent = '保存中…'
+      try{
+        await saveDish({ name, category, tags, cook_minutes:cookMinutes, on_sale:onSale, image, ingredients:ings }, location.hash.split('?id=')[1])
+        toast('已保存'); setTimeout(()=>history.back(), 500)
+      }catch(e){ toast(e.message||'保存失败') }
+      finally{ btnSave.disabled=false; btnSave.textContent='保存' }
+    }
+  }
+  const btnDel = document.getElementById('btnDel')
+  if (btnDel){
+    btnDel.onclick = async ()=>{
+      if (!confirm('确认删除这道菜？历史订单会保留菜名')) return
+      btnDel.textContent = '删除中…'
+      try{
+        await deleteDish(location.hash.split('?id=')[1])
+        toast('已删除'); setTimeout(()=>history.back(), 500)
+      }catch(e){ toast(e.message||'删除失败') }
+    }
+  }
+}
+
+// ============= 启动 =============
+window.App = App
+window.Modal = Modal
+
+// 暴露到全局
+window.cartAdd = cartAdd
+window.cartDec = cartDec
+window.submitOrder = submitOrder
+window.setOrderStatus = setOrderStatus
+window.saveDish = saveDish
+window.deleteDish = deleteDish
+
+// nickname 存取
+const nickInput = document.getElementById('nickInput')
+
+// 启动：检查配置 → 初始加载
+if (!State.sbUrl || !State.sbKey){
+  Modal.open('configModal')
+} else {
+  loadAll()
+}
+
+onHash()
+App.startRefresh()
+
+// 每 30 秒主动拉一次
+</script>
+</body>
+</html>
