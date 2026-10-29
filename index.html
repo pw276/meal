@@ -96,6 +96,8 @@ html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:
 .o-note{margin-top:8px;font-size:12px;color:var(--muted)}
 .o-foot{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
 .o-act{font-size:13px;color:var(--brand);font-weight:600;padding:4px 14px;border:1px solid var(--brand);border-radius:var(--radius-pill);background:none;cursor:pointer}
+.o-btns{display:flex;gap:8px;align-items:center}
+.o-del{font-size:13px;color:#8b8f96;font-weight:500;padding:4px 12px;border:1px solid var(--border);border-radius:var(--radius-pill);background:none;cursor:pointer}
 .o-act:active{background:var(--brand-soft)}
 
 /* ==== 汇总 ==== */
@@ -363,6 +365,11 @@ async function submitOrder({mealDate,mealType,note='',items}){
   return { orderId, itemCount }
 }
 
+async function deleteOrder(id){
+  await api(`orders?id=eq.${id}`, { method:'DELETE' })
+  await loadAll()
+}
+
 async function setOrderStatus(id, status){
   await api(`orders?id=eq.${id}`, {
     method:'PATCH',
@@ -554,7 +561,10 @@ function renderOrders(){
       ${o.note?`<div class="o-note">整单备注：${o.note}</div>`:''}
       <div class="o-foot">
         <span class="muted">${o.owner_nick||'家人'} · 共 ${o.item_count} 份</span>
-        ${o.status!=='done'?`<button class="o-act" data-finish="${o.id}">标记完成</button>`:''}
+        <div class="o-btns">
+          ${o.status!=='done'?`<button class="o-act" data-finish="${o.id}">标记完成</button>`:''}
+          <button class="o-del" data-del="${o.id}">删除</button>
+        </div>
       </div>
     </div>`
   }).join('') : `<div class="empty">还没有订单</div>`}
@@ -755,6 +765,13 @@ function bind(){
   document.querySelectorAll('[data-finish]').forEach(btn=>{
     btn.onclick = ()=>{
       if (confirm('确认这一单已做好？')){ setOrderStatus(btn.dataset.finish, 'done'); toast('已标记') }
+    }
+  })
+
+  // 删除订单
+  document.querySelectorAll('[data-del]').forEach(btn=>{
+    btn.onclick = ()=>{
+      if (confirm('删除这一单？删除后无法恢复')){ deleteOrder(btn.dataset.del); toast('已删除') }
     }
   })
 
